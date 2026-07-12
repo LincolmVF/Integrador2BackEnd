@@ -38,21 +38,16 @@ export const mercadoPagoService = {
     if (status === 'approved') {
       const deuda_id = parseInt(external_reference);
       
-      // Ejecutamos todo dentro de una transacción para asegurar consistencia idéntica al flujo manual
-      return await prisma.$transaction(async (tx) => {
+      // 📦 PARTE 1: Guardamos en la base de datos (Transacción 1)
+      const pagoCreado = await prisma.$transaction(async (tx) => {
         
-        // 1. Buscamos la deuda asociada para conocer al alumno
         const deuda = await tx.cuentas_por_cobrar.findUnique({
           where: { id: deuda_id }
         });
 
-        if (!deuda) {
-          console.error(`❌ [WEBHOOK MP] Deuda ID ${deuda_id} no encontrada en la base de datos.`);
-          return { success: false };
-        }
+        if (!deuda) throw new Error(`Deuda no encontrada: ${deuda_id}`);
 
-        // 2. Simulamos el "Escudo protector" del flujo manual: Pasar inscripciones a 'POR_VALIDAR'
-        // Esto es vital porque tu función validarPago exige que las inscripciones estén en 'POR_VALIDAR' para activarlas.
+        // Escudo protector: Pasar a POR_VALIDAR
         await tx.cuentas_por_cobrar.update({
           where: { id: deuda_id },
           data: { estado: 'POR_VALIDAR', actualizado_en: new Date() },
@@ -63,7 +58,6 @@ export const mercadoPagoService = {
           data: { estado: 'POR_VALIDAR', actualizado_en: new Date() },
         });
 
-        // 3. Buscamos o creamos el pago (Blindaje contra duplicados de webhooks de MP)
         let pago = await tx.pagos.findFirst({ 
           where: { cuenta_id: deuda_id, codigo_operacion: paymentId } 
         });
@@ -76,26 +70,27 @@ export const mercadoPagoService = {
               cuenta_id: deuda_id,
               metodo_pago_id: metodoPago ? metodoPago.id : 1, 
               monto_pagado: parseFloat(transaction_amount),
-              estado_validacion: 'PENDIENTE', // Inicia pendiente para que validarPago lo procese correctamente
+              estado_validacion: 'PENDIENTE', 
               codigo_operacion: paymentId,
               fecha_pago: new Date()
             }
           });
         }
+        // Retornamos el pago para usarlo fuera de la transacción
+        return pago; 
+      }); 
+      // 🛑 AQUÍ TERMINA LA TRANSACCIÓN 1. El pago ya es visible para toda la base de datos.
 
-        // 4. Invocamos de inmediato la lógica maestra de validación (Alcancía, estados, activación y clases)
-        // Pasamos el objeto de transacción 'tx' si tu pagosService lo soporta, o dejamos que corra de forma regular.
-        // Como 'validarPago' maneja su propia transacción interna, ejecutamos la llamada directa:
-        const resultado = await pagosService.validarPago({
-          pago_id: pago.id,
-          accion: 'APROBAR',
-          usuario_admin_id: 1, // ID del Bot/Sistema de automatización
-          notas: 'Validación automática y generación de ciclos vía Mercado Pago Webhook.'
-        });
-
-        console.log(`🚀 [AUTOMATIZACIÓN COMPLETADA] Ciclo activo y clases generadas para deuda ${deuda_id}`);
-        return { success: true, deuda_id };
+      // 🚀 PARTE 2: Ejecutamos tu lógica maestra (que abrirá su propia Transacción 2)
+      const resultado = await pagosService.validarPago({
+        pago_id: pagoCreado.id,
+        accion: 'APROBAR',
+        usuario_admin_id: 1, 
+        notas: 'Validación automática y generación de ciclos vía Mercado Pago Webhook.'
       });
+
+      console.log(`🚀 [AUTOMATIZACIÓN COMPLETADA] Ciclo activo y clases generadas para deuda ${deuda_id}`);
+      return { success: true, deuda_id };
     }
     
     return { success: false };

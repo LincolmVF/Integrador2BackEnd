@@ -240,12 +240,12 @@ generarLinkMP: async (req, res) => {
       // Log para monitorear qué está llegando exactamente desde MP
       console.log(`📩 [WEBHOOK RECIBIDO] Topic: ${topic}, ID: ${query.id || query['data.id']}`);
 
-      if (topic === 'payment' || topic === 'merchant_order') {
+      if (topic === 'payment') { 
         const paymentId = query['data.id'] || query.id;
         
         if (paymentId) {
             const resultado = await mercadoPagoService.verificarYActualizarPago(paymentId);
-            if (resultado.success) {
+            if (resultado && resultado.success) {
               console.log(`✅ [WEBHOOK MP] Pago ${paymentId} procesado con éxito para deuda ${resultado.deuda_id}`);
             }
         }
