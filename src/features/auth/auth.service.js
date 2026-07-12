@@ -360,6 +360,21 @@ export const authService = {
     }
   },
 
+  resetPasswordByAdmin: async (userId, newPassword) => {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    try {
+      await prisma.credenciales_usuario.update({
+        where: { usuario_id: Number(userId) },
+        data: { hash_contrasena: hashedPassword },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError) {
+        throw new ApiError(e.message, 400, { prismaCode: e.code, meta: e.meta })
+      };
+      throw new ApiError(e instanceof Error ? e.message : 'Error interno', 500);
+    };
+  },
+
   /**
    * Cambia la contraseña de un usuario autenticado prevalidando su contraseña actual.
    * @param {number} userId - ID del usuario autenticado.
