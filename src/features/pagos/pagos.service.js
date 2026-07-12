@@ -93,7 +93,7 @@ export const pagosService = {
             data: {
               monto_pagado: montoAdmin,
               notas_validacion: `Monto corregido por Admin. (Reportado: ${pago.monto_pagado})`,
-              codigo_operacion: 'Pagado | Sin código',
+              
             },
             include: { cuentas_por_cobrar: true },
           });
@@ -129,7 +129,7 @@ export const pagosService = {
           revisado_por: Number.parseInt(usuario_admin_id),
           notas_validacion: `${notas || ''} | ${notaFinalInformativa}`,
           fecha_pago: new Date(),
-          codigo_operacion: 'Pagado | Sin código',
+          
         },
       });
 
