@@ -6,19 +6,18 @@ export const alumnoLogic = {
    * @param {Object} datos Campos a actualizar (email, telefono, fecha...)
    */
   async actualizarDatosBaseUsuario(tx, usuarioId, datos) {
-    const { email, telefono_personal, fecha_nacimiento, tipo_documento_id, numero_documento, genero } =
+    const { email, telefono_personal, fecha_nacimiento, numero_documento, genero } =
       datos;
 
     const dataUsuario = {};
     if (email) dataUsuario.email = email;
     if (telefono_personal) dataUsuario.telefono_personal = telefono_personal;
     if (fecha_nacimiento) dataUsuario.fecha_nacimiento = new Date(fecha_nacimiento);
-    if (tipo_documento_id) dataUsuario.tipo_documento_id = tipo_documento_id;
     if (numero_documento) dataUsuario.numero_documento = numero_documento;
     if (genero) dataUsuario.genero = genero;
 
     if (Object.keys(dataUsuario).length > 0) {
-      await tx.usuarios.update({ where: { id: usuarioId }, data: dataUsuario });
+      return await tx.usuarios.update({ where: { id: usuarioId }, data: dataUsuario });
     }
   },
 
