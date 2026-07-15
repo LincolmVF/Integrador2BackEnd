@@ -37,7 +37,8 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.0.0",
     "prettier": "^3.8.0",
-    "prisma": "5.10.2"
+    "prisma": "5.10.2",
+    "supertest": "^7.2.2"
   },
   "dependencies": {
     "@prisma/client": "5.10.2",
